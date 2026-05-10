@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as ChecklistsRouteImport } from './routes/checklists'
 import { Route as AbsencesRouteImport } from './routes/absences'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ChecklistsIndexRouteImport } from './routes/checklists.index'
@@ -19,6 +20,11 @@ import { Route as ChecklistsIdRouteImport } from './routes/checklists.$id'
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChecklistsRoute = ChecklistsRouteImport.update({
+  id: '/checklists',
+  path: '/checklists',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AbsencesRoute = AbsencesRouteImport.update({
@@ -32,9 +38,9 @@ const IndexRoute = IndexRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const ChecklistsIndexRoute = ChecklistsIndexRouteImport.update({
-  id: '/checklists/',
-  path: '/checklists/',
-  getParentRoute: () => rootRouteImport,
+  id: '/',
+  path: '/',
+  getParentRoute: () => ChecklistsRoute,
 } as any)
 const ChecklistsNewRoute = ChecklistsNewRouteImport.update({
   id: '/new',
@@ -50,6 +56,7 @@ const ChecklistsIdRoute = ChecklistsIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/absences': typeof AbsencesRoute
+  '/checklists': typeof ChecklistsRouteWithChildren
   '/settings': typeof SettingsRoute
   '/checklists/$id': typeof ChecklistsIdRoute
   '/checklists/new': typeof ChecklistsNewRoute
@@ -67,6 +74,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/absences': typeof AbsencesRoute
+  '/checklists': typeof ChecklistsRouteWithChildren
   '/settings': typeof SettingsRoute
   '/checklists/$id': typeof ChecklistsIdRoute
   '/checklists/new': typeof ChecklistsNewRoute
@@ -77,6 +85,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/absences'
+    | '/checklists'
     | '/settings'
     | '/checklists/$id'
     | '/checklists/new'
@@ -93,6 +102,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/absences'
+    | '/checklists'
     | '/settings'
     | '/checklists/$id'
     | '/checklists/new'
@@ -102,8 +112,8 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AbsencesRoute: typeof AbsencesRoute
+  ChecklistsRoute: typeof ChecklistsRouteWithChildren
   SettingsRoute: typeof SettingsRoute
-  ChecklistsIndexRoute: typeof ChecklistsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -113,6 +123,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/checklists': {
+      id: '/checklists'
+      path: '/checklists'
+      fullPath: '/checklists'
+      preLoaderRoute: typeof ChecklistsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/absences': {
@@ -131,10 +148,10 @@ declare module '@tanstack/react-router' {
     }
     '/checklists/': {
       id: '/checklists/'
-      path: '/checklists'
+      path: '/'
       fullPath: '/checklists/'
       preLoaderRoute: typeof ChecklistsIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof ChecklistsRoute
     }
     '/checklists/new': {
       id: '/checklists/new'
@@ -153,11 +170,27 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface ChecklistsRouteChildren {
+  ChecklistsIdRoute: typeof ChecklistsIdRoute
+  ChecklistsNewRoute: typeof ChecklistsNewRoute
+  ChecklistsIndexRoute: typeof ChecklistsIndexRoute
+}
+
+const ChecklistsRouteChildren: ChecklistsRouteChildren = {
+  ChecklistsIdRoute: ChecklistsIdRoute,
+  ChecklistsNewRoute: ChecklistsNewRoute,
+  ChecklistsIndexRoute: ChecklistsIndexRoute,
+}
+
+const ChecklistsRouteWithChildren = ChecklistsRoute._addFileChildren(
+  ChecklistsRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AbsencesRoute: AbsencesRoute,
+  ChecklistsRoute: ChecklistsRouteWithChildren,
   SettingsRoute: SettingsRoute,
-  ChecklistsIndexRoute: ChecklistsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
