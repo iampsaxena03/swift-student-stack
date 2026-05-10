@@ -9,38 +9,136 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as ChecklistsRouteImport } from './routes/checklists'
+import { Route as AbsencesRouteImport } from './routes/absences'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ChecklistsIndexRouteImport } from './routes/checklists.index'
+import { Route as ChecklistsNewRouteImport } from './routes/checklists.new'
+import { Route as ChecklistsIdRouteImport } from './routes/checklists.$id'
 
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChecklistsRoute = ChecklistsRouteImport.update({
+  id: '/checklists',
+  path: '/checklists',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AbsencesRoute = AbsencesRouteImport.update({
+  id: '/absences',
+  path: '/absences',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ChecklistsIndexRoute = ChecklistsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ChecklistsRoute,
+} as any)
+const ChecklistsNewRoute = ChecklistsNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => ChecklistsRoute,
+} as any)
+const ChecklistsIdRoute = ChecklistsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ChecklistsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/absences': typeof AbsencesRoute
+  '/checklists': typeof ChecklistsRouteWithChildren
+  '/settings': typeof SettingsRoute
+  '/checklists/$id': typeof ChecklistsIdRoute
+  '/checklists/new': typeof ChecklistsNewRoute
+  '/checklists/': typeof ChecklistsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/absences': typeof AbsencesRoute
+  '/settings': typeof SettingsRoute
+  '/checklists/$id': typeof ChecklistsIdRoute
+  '/checklists/new': typeof ChecklistsNewRoute
+  '/checklists': typeof ChecklistsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/absences': typeof AbsencesRoute
+  '/checklists': typeof ChecklistsRouteWithChildren
+  '/settings': typeof SettingsRoute
+  '/checklists/$id': typeof ChecklistsIdRoute
+  '/checklists/new': typeof ChecklistsNewRoute
+  '/checklists/': typeof ChecklistsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/absences'
+    | '/checklists'
+    | '/settings'
+    | '/checklists/$id'
+    | '/checklists/new'
+    | '/checklists/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/absences'
+    | '/settings'
+    | '/checklists/$id'
+    | '/checklists/new'
+    | '/checklists'
+  id:
+    | '__root__'
+    | '/'
+    | '/absences'
+    | '/checklists'
+    | '/settings'
+    | '/checklists/$id'
+    | '/checklists/new'
+    | '/checklists/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AbsencesRoute: typeof AbsencesRoute
+  ChecklistsRoute: typeof ChecklistsRouteWithChildren
+  SettingsRoute: typeof SettingsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/checklists': {
+      id: '/checklists'
+      path: '/checklists'
+      fullPath: '/checklists'
+      preLoaderRoute: typeof ChecklistsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/absences': {
+      id: '/absences'
+      path: '/absences'
+      fullPath: '/absences'
+      preLoaderRoute: typeof AbsencesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +146,52 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/checklists/': {
+      id: '/checklists/'
+      path: '/'
+      fullPath: '/checklists/'
+      preLoaderRoute: typeof ChecklistsIndexRouteImport
+      parentRoute: typeof ChecklistsRoute
+    }
+    '/checklists/new': {
+      id: '/checklists/new'
+      path: '/new'
+      fullPath: '/checklists/new'
+      preLoaderRoute: typeof ChecklistsNewRouteImport
+      parentRoute: typeof ChecklistsRoute
+    }
+    '/checklists/$id': {
+      id: '/checklists/$id'
+      path: '/$id'
+      fullPath: '/checklists/$id'
+      preLoaderRoute: typeof ChecklistsIdRouteImport
+      parentRoute: typeof ChecklistsRoute
+    }
   }
 }
 
+interface ChecklistsRouteChildren {
+  ChecklistsIdRoute: typeof ChecklistsIdRoute
+  ChecklistsNewRoute: typeof ChecklistsNewRoute
+  ChecklistsIndexRoute: typeof ChecklistsIndexRoute
+}
+
+const ChecklistsRouteChildren: ChecklistsRouteChildren = {
+  ChecklistsIdRoute: ChecklistsIdRoute,
+  ChecklistsNewRoute: ChecklistsNewRoute,
+  ChecklistsIndexRoute: ChecklistsIndexRoute,
+}
+
+const ChecklistsRouteWithChildren = ChecklistsRoute._addFileChildren(
+  ChecklistsRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AbsencesRoute: AbsencesRoute,
+  ChecklistsRoute: ChecklistsRouteWithChildren,
+  SettingsRoute: SettingsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
