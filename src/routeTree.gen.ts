@@ -10,20 +10,15 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SettingsRouteImport } from './routes/settings'
-import { Route as ChecklistsRouteImport } from './routes/checklists'
 import { Route as AbsencesRouteImport } from './routes/absences'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ChecklistsIndexRouteImport } from './routes/checklists.index'
 import { Route as ChecklistsNewRouteImport } from './routes/checklists.new'
 import { Route as ChecklistsIdRouteImport } from './routes/checklists.$id'
 
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ChecklistsRoute = ChecklistsRouteImport.update({
-  id: '/checklists',
-  path: '/checklists',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AbsencesRoute = AbsencesRouteImport.update({
@@ -34,6 +29,11 @@ const AbsencesRoute = AbsencesRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChecklistsIndexRoute = ChecklistsIndexRouteImport.update({
+  id: '/checklists/',
+  path: '/checklists/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ChecklistsNewRoute = ChecklistsNewRouteImport.update({
@@ -50,60 +50,60 @@ const ChecklistsIdRoute = ChecklistsIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/absences': typeof AbsencesRoute
-  '/checklists': typeof ChecklistsRouteWithChildren
   '/settings': typeof SettingsRoute
   '/checklists/$id': typeof ChecklistsIdRoute
   '/checklists/new': typeof ChecklistsNewRoute
+  '/checklists/': typeof ChecklistsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/absences': typeof AbsencesRoute
-  '/checklists': typeof ChecklistsRouteWithChildren
   '/settings': typeof SettingsRoute
   '/checklists/$id': typeof ChecklistsIdRoute
   '/checklists/new': typeof ChecklistsNewRoute
+  '/checklists': typeof ChecklistsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/absences': typeof AbsencesRoute
-  '/checklists': typeof ChecklistsRouteWithChildren
   '/settings': typeof SettingsRoute
   '/checklists/$id': typeof ChecklistsIdRoute
   '/checklists/new': typeof ChecklistsNewRoute
+  '/checklists/': typeof ChecklistsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/absences'
-    | '/checklists'
     | '/settings'
     | '/checklists/$id'
     | '/checklists/new'
+    | '/checklists/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/absences'
-    | '/checklists'
     | '/settings'
     | '/checklists/$id'
     | '/checklists/new'
+    | '/checklists'
   id:
     | '__root__'
     | '/'
     | '/absences'
-    | '/checklists'
     | '/settings'
     | '/checklists/$id'
     | '/checklists/new'
+    | '/checklists/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AbsencesRoute: typeof AbsencesRoute
-  ChecklistsRoute: typeof ChecklistsRouteWithChildren
   SettingsRoute: typeof SettingsRoute
+  ChecklistsIndexRoute: typeof ChecklistsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -113,13 +113,6 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/checklists': {
-      id: '/checklists'
-      path: '/checklists'
-      fullPath: '/checklists'
-      preLoaderRoute: typeof ChecklistsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/absences': {
@@ -134,6 +127,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/checklists/': {
+      id: '/checklists/'
+      path: '/checklists'
+      fullPath: '/checklists/'
+      preLoaderRoute: typeof ChecklistsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/checklists/new': {
@@ -153,26 +153,22 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface ChecklistsRouteChildren {
-  ChecklistsIdRoute: typeof ChecklistsIdRoute
-  ChecklistsNewRoute: typeof ChecklistsNewRoute
-}
-
-const ChecklistsRouteChildren: ChecklistsRouteChildren = {
-  ChecklistsIdRoute: ChecklistsIdRoute,
-  ChecklistsNewRoute: ChecklistsNewRoute,
-}
-
-const ChecklistsRouteWithChildren = ChecklistsRoute._addFileChildren(
-  ChecklistsRouteChildren,
-)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AbsencesRoute: AbsencesRoute,
-  ChecklistsRoute: ChecklistsRouteWithChildren,
   SettingsRoute: SettingsRoute,
+  ChecklistsIndexRoute: ChecklistsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

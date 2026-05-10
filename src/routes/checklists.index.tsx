@@ -3,7 +3,7 @@ import { Pin, Plus, ChevronRight } from "lucide-react";
 import { PhoneShell } from "@/components/PhoneShell";
 import { useStore, colorTile } from "@/lib/store";
 
-export const Route = createFileRoute("/checklists")({
+export const Route = createFileRoute("/checklists/")({
   head: () => ({
     meta: [
       { title: "Checklists — Pocket" },
