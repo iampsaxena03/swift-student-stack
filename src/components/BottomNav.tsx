@@ -1,12 +1,12 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import { Home, CalendarDays, ListChecks, Settings } from "lucide-react";
 
-const tabs = [
+const tabs: { to: string; label: string; icon: typeof Home; exact?: boolean }[] = [
   { to: "/", label: "Home", icon: Home, exact: true },
   { to: "/absences", label: "Absences", icon: CalendarDays },
   { to: "/checklists", label: "Lists", icon: ListChecks },
   { to: "/settings", label: "Settings", icon: Settings },
-] as const;
+];
 
 export function BottomNav() {
   const location = useLocation();
@@ -24,7 +24,7 @@ export function BottomNav() {
           return (
             <Link
               key={t.to}
-              to={t.to}
+              to={t.to as any}
               className={`flex h-12 min-w-12 items-center justify-center rounded-full px-4 transition-all active:scale-95 ${
                 active ? "bg-white text-[oklch(0.16_0.005_270)]" : "text-white/60"
               }`}
