@@ -36,8 +36,10 @@ function ChecklistDetail() {
   const togglePin = useStore((s) => s.togglePin);
   const reset = useStore((s) => s.resetChecklist);
   const reorderItems = useStore((s) => s.reorderItems);
+  const updateChecklist = useStore((s) => s.updateChecklist);
 
   const [adding, setAdding] = useState("");
+  const [editingName, setEditingName] = useState(false);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   if (!list) {
@@ -88,7 +90,22 @@ function ChecklistDetail() {
             {list.icon}
           </div>
           <div className="flex-1">
-            <h1 className="text-on-surface text-2xl font-semibold tracking-tight">{list.name}</h1>
+            {editingName ? (
+              <input
+                autoFocus
+                defaultValue={list.name}
+                onBlur={(e) => { updateChecklist(list.id, { name: e.target.value.trim() || list.name }); setEditingName(false); }}
+                onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                className="text-on-surface w-full rounded-lg bg-white/10 px-2 py-1 text-2xl font-semibold tracking-tight focus:outline-none"
+              />
+            ) : (
+              <h1
+                onClick={() => setEditingName(true)}
+                className="text-on-surface text-2xl font-semibold tracking-tight active:opacity-70"
+              >
+                {list.name}
+              </h1>
+            )}
             <p className="text-on-surface-muted text-xs">{pct}% ready to go</p>
           </div>
           <button

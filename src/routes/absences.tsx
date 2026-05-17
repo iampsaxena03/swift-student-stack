@@ -9,7 +9,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/absences")({
   head: () => ({
     meta: [
-      { title: "Absences — Pocket" },
+      { title: "Absences · Slyve" },
       { name: "description", content: "See every day you missed at a glance." },
     ],
   }),

@@ -1,12 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Pin, Plus, ChevronRight } from "lucide-react";
+import { Pin, Plus, ChevronRight, Trash2, PinOff } from "lucide-react";
 import { PhoneShell } from "@/components/PhoneShell";
 import { useStore, colorTile } from "@/lib/store";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/checklists/")({
   head: () => ({
     meta: [
-      { title: "Checklists — Pocket" },
+      { title: "Checklists · Slyve" },
       { name: "description", content: "All your checkout checklists in one tap." },
     ],
   }),
@@ -15,6 +16,8 @@ export const Route = createFileRoute("/checklists/")({
 
 function ChecklistsPage() {
   const checklists = useStore((s) => s.checklists);
+  const togglePin = useStore((s) => s.togglePin);
+  const removeChecklist = useStore((s) => s.removeChecklist);
   const pinned = checklists.filter((c) => c.pinned);
   const others = checklists.filter((c) => !c.pinned);
 
@@ -79,25 +82,42 @@ function ChecklistsPage() {
           {others.map((c, idx) => {
             const done = c.items.filter((i) => i.done).length;
             return (
-              <Link
+              <div
                 key={c.id}
-                to="/checklists/$id"
-                params={{ id: c.id }}
-                className={`flex items-center gap-3 px-4 py-4 active:bg-white/5 ${
-                  idx > 0 ? "border-t border-white/5" : ""
-                }`}
+                className={`flex items-center gap-2 px-3 py-3 ${idx > 0 ? "border-t border-white/5" : ""}`}
               >
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-xl">
-                  {c.icon}
-                </div>
-                <div className="flex-1">
-                  <p className="text-on-surface text-sm font-semibold">{c.name}</p>
-                  <p className="text-on-surface-muted text-xs">
-                    {done}/{c.items.length} ready
-                  </p>
-                </div>
-                <ChevronRight className="h-4 w-4 text-white/40" />
-              </Link>
+                <Link
+                  to="/checklists/$id"
+                  params={{ id: c.id }}
+                  preload="intent"
+                  className="flex flex-1 items-center gap-3 active:opacity-70"
+                >
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-xl">
+                    {c.icon}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-on-surface text-sm font-semibold">{c.name}</p>
+                    <p className="text-on-surface-muted text-xs">
+                      {done}/{c.items.length} ready
+                    </p>
+                  </div>
+                </Link>
+                <button
+                  onClick={() => { togglePin(c.id); toast(c.pinned ? "Unpinned" : "Pinned"); }}
+                  aria-label="Toggle pin"
+                  className="flex h-9 w-9 items-center justify-center rounded-full text-white/60 active:scale-90"
+                >
+                  {c.pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+                </button>
+                <button
+                  onClick={() => { if (confirm(`Delete "${c.name}"?`)) removeChecklist(c.id); }}
+                  aria-label="Delete"
+                  className="flex h-9 w-9 items-center justify-center rounded-full text-white/60 active:scale-90"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+                <ChevronRight className="h-4 w-4 text-white/30" />
+              </div>
             );
           })}
         </div>

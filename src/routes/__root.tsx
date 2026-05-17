@@ -7,9 +7,11 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
+import { useEffect } from "react";
 
 import appCss from "../styles.css?url";
 import { Toaster } from "@/components/ui/sonner";
+import { useStore } from "@/lib/store";
 
 function NotFoundComponent() {
   return (
@@ -115,6 +117,31 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  useEffect(() => {
+    // Hydrate zustand store once at app start
+    if (!useStore.getState().hydrated) {
+      useStore.persist.rehydrate()?.then(() => useStore.getState().setHydrated());
+    }
+
+    // Register service worker — guarded against Lovable preview / iframes
+    if (typeof window === "undefined") return;
+    const inIframe = (() => { try { return window.self !== window.top; } catch { return true; } })();
+    const host = window.location.hostname;
+    const isPreview =
+      host.includes("id-preview--") ||
+      host.includes("preview--") ||
+      host.includes("lovableproject.com") ||
+      host.includes("lovableproject-dev.com");
+
+    if ("serviceWorker" in navigator) {
+      if (inIframe || isPreview) {
+        navigator.serviceWorker.getRegistrations().then((rs) => rs.forEach((r) => r.unregister()));
+      } else {
+        navigator.serviceWorker.register("/sw.js").catch(() => {});
+      }
+    }
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
