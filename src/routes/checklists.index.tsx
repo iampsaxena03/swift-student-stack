@@ -6,7 +6,7 @@ import { useStore, colorTile } from "@/lib/store";
 export const Route = createFileRoute("/checklists/")({
   head: () => ({
     meta: [
-      { title: "Checklists — Pocket" },
+      { title: "Checklists · Slyve" },
       { name: "description", content: "All your checkout checklists in one tap." },
     ],
   }),

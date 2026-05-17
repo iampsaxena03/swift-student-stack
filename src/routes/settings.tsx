@@ -21,7 +21,7 @@ function SettingsPage() {
   return (
     <PhoneShell>
       <div className="px-6 pt-12">
-        <p className="text-on-surface-muted text-sm">Pocket</p>
+        <p className="text-on-surface-muted text-sm">Slyve</p>
         <h1 className="text-on-surface mt-1 text-3xl font-semibold tracking-tight">Settings</h1>
 
         <div className="mt-6 grid grid-cols-2 gap-3">
@@ -54,7 +54,7 @@ function SettingsPage() {
           />
           <Row
             icon={<Info className="h-5 w-5" />}
-            title="About Pocket"
+            title="About Slyve"
             sub="Built for students. All your data stays on this device."
             border
           />
