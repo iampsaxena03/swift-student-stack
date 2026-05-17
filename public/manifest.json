@@ -1,7 +1,7 @@
 {
-  "name": "Pocket — Student Survival",
-  "short_name": "Pocket",
-  "description": "Track absences and never forget a thing before leaving home.",
+  "name": "Slyve",
+  "short_name": "Slyve",
+  "description": "Track absences. Never forget a thing.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
