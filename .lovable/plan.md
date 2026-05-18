@@ -1,104 +1,163 @@
-## 1. Rebrand: Pocket → Slyve (everywhere)
+## Homework Tracker + Vercel-ready deploy
 
-- `public/manifest.json`: `name`, `short_name`, `description` → "Slyve".
-- `src/routes/__root.tsx`: already shows "Slyve" in title/OG — double-check description, twitter strings all say Slyve.
-- Remove every "Pocket" string from `settings.tsx` (eyebrow + "About Pocket" row), `checklists.index.tsx` head title, `absences.tsx` head title.
-- Remove the "Student survival kit" hero on `src/routes/index.tsx`. Replace with a single, clean "Slyve" wordmark + a one-line subtitle (or nothing).
-- Update the icon set so the installed home-screen tile shows the Slyve mark. Regenerate `public/icon-192.png` and `public/icon-512.png` with a simple "S" / Slyve glyph (so when added to the home screen, label = Slyve, icon = Slyve).
-- Set `<title>` and og:title to plain "Slyve" on home; sub-pages become "Checklists · Slyve", "Absences · Slyve", etc.
+A new top-priority feature on Slyve: a daily / weekend Homework Tracker with per-subject entries, a calendar history view, configurable daily reset, and a Vercel-safe build.
 
-## 2. Restructure the home page
+---
 
-New top-down order on `src/routes/index.tsx`:
+### 1. Data model (extend `src/lib/store.ts`)
 
-```text
-[small date row + settings cog]
-[Pinned checklist tiles — BIG, 2-col grid, first thing visible]
-[“+ New checklist” inline tile if there’s room]
-[Mark today absent pill]
-[Small stats row: absences this month · total checklists]
+```ts
+type HomeworkKind = "today" | "weekend";
+type Subject = "physics" | "chemistry" | "maths";
+
+type HomeworkEntry = {
+  id: string;
+  date: string;        // YYYY-MM-DD the entry was logged
+  kind: HomeworkKind;  // today | weekend
+  subject: Subject;
+  dpp?: string;
+  modules?: string;
+  others?: string;
+  createdAt: number;
+  // weekend entries are valid from `date` through the upcoming Sunday
+  weekendEndDate?: string;
+};
 ```
 
-- Pinned shortcuts move to the top, sized larger (taller tiles, bigger icon, name + ready count).
-- Quick-action tiles (Absences/Checklists count) demoted to a compact 2-up row near the bottom.
-- “Mark today absent” stays as a single tap pill, placed right under pinned tiles.
-- If no pinned lists exist, show a “Pin a list for one-tap access” empty state with a CTA to `/checklists`.
+Store additions:
+- `homework: HomeworkEntry[]`
+- `settings: { dailyResetTime: string /* "HH:mm", default "00:00" */ }`
+- Actions: `upsertHomework(entry)`, `removeHomework(id)`, `setDailyResetTime(time)`
+- Selectors:
+  - `getTodayHomework(now)` → entries whose "logical day" (shifted by reset time) equals today's logical day, kind === "today".
+  - `getWeekendHomework(date)` → kind === "weekend" entries whose `[date, weekendEndDate]` range contains `date`.
+  - `getHomeworkForDate(date)` → both "today" entries for that logical day and all "weekend" entries active on that date.
 
-## 3. Editable templates in “New checklist”
+Logical-day rule: a "today" entry logged at time T belongs to the day window `[lastReset(T), nextReset(T))`. So if reset = 10:30, anything logged 03:00 Tue still belongs to Mon's homework until 10:30 Tue.
 
-`src/routes/checklists.new.tsx`:
+---
 
-- After picking a template (or Blank), render the seeded items inline as an editable list:
-  - Each row: text input + trash button → removes from local draft.
-  - Bottom row: “+ Add item” inline input.
-- Internal state becomes `draftItems: {id, text}[]` instead of just a template key.
-- “Create checklist” uses `draftItems` (so any deletions/additions/edits are respected).
-- Switching template repopulates `draftItems` from that template (with a small toast: “Template applied”).
+### 2. Home screen (`src/routes/index.tsx`)
 
-## 4. Floating dock bottom nav (iPhone-style)
+New top-down order:
 
-Rework `src/components/BottomNav.tsx` + `PhoneShell`:
+```
+[date row + ⚙]
+[Homework card — TOP, above Quick lists]
+   - Toggle: Today | Weekend
+   - For each subject (Physics, Chemistry, Maths) with any non-empty field:
+       subject pill + DPP / Modules / Others lines
+   - Subjects with no homework are hidden (not shown as empty)
+   - "Weekend" entries show their active window: "Wed → Sun"
+   - Empty state: "No homework yet — tap + to add"
+[Quick lists grid]
+[+ New list tile]
+[Mark today absent pill]
+[Stats row]
+```
 
-- Use `position: fixed` (not absolute), pinned to the bottom of the viewport so it floats over content as you scroll.
-- Inside `.phone-shell`: keep it visually centered with `max-width: 440px` and `left/right: 0; margin-inline: auto;`.
-- Visual: blurred rounded-3xl pill (`backdrop-blur-xl`, semi-transparent dark surface, subtle white ring, drop shadow), 64px tall, icons larger (24px), active item gets a white circular “lens” behind the icon plus the label. Inactive items: icon only, muted.
-- Add a center FAB-style "+" button (the dock’s middle slot) that goes to `/checklists/new` from anywhere — primary action.
-- Bottom offset uses `env(safe-area-inset-bottom)` with extra 12px so it sits above the iOS home indicator.
-- Content padding-bottom bumped to ~120px so the dock never overlaps content.
-- Hide dock on `/checklists/new` (already supported via `hideNav`) and on `/checklists/$id` editing form when keyboard is open (CSS only, optional).
+Card visual: rounded-3xl surface, subject color dot, monospace-ish DPP text, soft dividers — matches existing premium look.
 
-## 5. Extra quality-of-life features
+---
 
-- **Long-press / swipe to delete checklists** from `checklists.index.tsx` — add a small ⋯ menu on each row with Pin / Rename / Delete.
-- **Edit checklist title + icon** from the detail view (tap the title to rename).
-- **Absence streak / last-absent label** on home next to the “mark today absent” pill.
-- **Haptic feedback** via `navigator.vibrate(10)` on toggle/check (no-op on iOS but works on Android).
-- **Share / Duplicate checklist**: a duplicate action so users can fork a template they’ve customized.
-- **“Reset all checked items” FAB on checklist detail** already exists — promote it visually.
-- **Empty calendar cell tap target** enlarged for thumb taps on `Calendar.tsx`.
+### 3. Floating dock `+` → Add homework flow
 
-## 6. Performance — make it feel instant after install
+Rework `BottomNav.tsx` center FAB:
 
-Root causes today:
-- No service worker, so every nav refetches the HTML shell over the network. After "install" the PWA is just a web view hitting the server.
-- `PhoneShell` calls `useStore.persist.rehydrate()` on each route mount; cheap but unnecessary repaint.
-- Some route mount animations (framer-motion) add perceived latency.
+- `+` now opens a bottom sheet (Radix Drawer/Sheet) instead of routing to `/checklists/new`.
+- Step 1: pick subject — 3 large tiles: Physics ⚛️, Chemistry 🧪, Maths 📐.
+- Step 2: form with three optional fields — DPP, Modules, Others (all textareas, all optional, at least one required).
+- Top toggle in the sheet: Today | Weekend (defaults to the toggle currently active on home).
+- Submit → `upsertHomework`, close sheet, toast "Saved".
+- Checklist creation moves to a small "+ New list" tile already on home (already exists).
 
-Fixes:
+(If user prefers a dedicated route over sheet, easy to swap — using sheet for speed/feel.)
 
-1. **Add a minimal, properly-guarded PWA service worker** (Lovable-safe):
-   - Install `vite-plugin-pwa` with `registerType: 'autoUpdate'`, `devOptions.enabled: false`.
-   - `workbox.runtimeCaching`:
-     - HTML navigations → `NetworkFirst` (3s timeout, fall back to cache → instant repeat navigations).
-     - JS/CSS/static assets → `StaleWhileRevalidate`.
-     - Images / icons / manifest → `CacheFirst` with 30-day expiration.
-   - `navigateFallbackDenylist: [/^\/api\//, /^\/~oauth/]`.
-   - Registration guard in `src/start.ts` / client entry: skip if `window.self !== window.top` OR hostname includes `id-preview--` / `lovableproject.com`; in those contexts, unregister any existing SW.
-   - Warn user in chat: SW only activates on the published deploy, not the editor preview.
+---
 
-2. **Prefetch route data on hover/touch**: TanStack Router does this by default for `<Link>`s; verify and remove any custom preventDefault.
+### 4. Homework Calendar — new route + dock slot
 
-3. **Cut needless re-renders**:
-   - Hoist `useStore.persist.rehydrate()` to `__root.tsx` once instead of in every `PhoneShell`.
-   - Replace per-route `motion.h1` mount animation with a single shared layout animation (or drop it).
+- New route: `src/routes/homework.tsx`
+  - Reuses `Calendar.tsx` (extended to accept a `markedDates: Set<string>` and `onSelect(date)` prop instead of toggle).
+  - Below the calendar: details panel for the selected date, grouped by subject (same renderer as home card). Shows both "today" homework logged on that logical day and "weekend" homework active that date (with badge "Weekend · Wed → Sun").
+- Dock: 4 slots + center FAB → Home · Absences · `+` · Homework 📓 · Checklists. (Settings stays reachable via gear icon on home.)
+- `Calendar.tsx` extended: optional `dotColor` per date, larger thumb tap targets already planned.
 
-4. **Make navigation use transitions**: wrap `<Outlet />` with `motion.div` + key=pathname for a 120ms crossfade — feels faster than blank flash.
+---
 
-5. **Trim bundle**: lazy-load `@dnd-kit/*` only on `/checklists/$id` (it’s currently imported eagerly).
+### 5. Settings — daily reset time
 
-## Technical notes
+`src/routes/settings.tsx`:
+- New section "Homework".
+- Time input (`<input type="time">`) bound to `settings.dailyResetTime`.
+- Helper text: "Today's homework will reset every day at this time. Weekend homework is not affected."
+- Persisted via zustand (already on localStorage).
 
-- File edits:
-  - `public/manifest.json`, `public/icon-192.png`, `public/icon-512.png`
-  - `src/routes/__root.tsx`, `src/routes/index.tsx`, `src/routes/settings.tsx`, `src/routes/absences.tsx`, `src/routes/checklists.index.tsx`, `src/routes/checklists.new.tsx`, `src/routes/checklists.$id.tsx`
-  - `src/components/BottomNav.tsx`, `src/components/PhoneShell.tsx`
-  - `src/styles.css` (dock blur tokens, content padding)
-  - `vite.config.ts` (PWA plugin), `src/start.ts` (SW register guard)
-- New deps: `vite-plugin-pwa`, `workbox-window`.
-- No backend changes; data stays local in zustand-persist.
+---
 
-## Out of scope
+### 6. Weekend window logic
 
-- Real OS widgets (impossible from a PWA).
-- Cloud sync / accounts.
-- Push notifications / reminders (separate follow-up).
+When saving a weekend entry on date D:
+- `weekendEndDate` = the upcoming Sunday (if D is Sunday, that same Sunday).
+- `getWeekendHomework(target)` returns entries where `D <= target <= weekendEndDate`.
+- Home "Weekend" toggle shows weekend homework active for today.
+- Calendar shows it on every day in that range, with a small "Weekend" tag and the range text.
+
+---
+
+### 7. Vercel deployment fix
+
+Root cause of the previous 404: this project is TanStack Start on Cloudflare Workers (`wrangler.jsonc`, `@cloudflare/vite-plugin`, `src/server.ts`). Deploying the Vite client `dist/` to Vercel as a static SPA breaks on refresh because Vercel doesn't know to fall back to `index.html` and there is no Worker entry to serve SSR.
+
+Plan:
+
+1. Add `vercel.json` at repo root with SPA rewrite + asset caching:
+   ```json
+   {
+     "cleanUrls": true,
+     "trailingSlash": false,
+     "rewrites": [{ "source": "/((?!api|assets|.*\\..*).*)", "destination": "/index.html" }],
+     "headers": [
+       { "source": "/assets/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }] },
+       { "source": "/sw.js", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }
+     ]
+   }
+   ```
+2. Ensure the build emits a static client bundle Vercel can serve:
+   - Add an SPA build script: `"build:spa": "vite build --mode spa"` that disables the Cloudflare worker plugin (env flag) and outputs `dist/`.
+   - Or simpler: document `outputDirectory: dist/client` in `vercel.json` and rely on TanStack Start's prerender to emit static HTML for known routes; add `prerender: { enabled: true, routes: ["/", "/absences", "/checklists", "/homework", "/settings"] }`.
+3. Confirm the SW path: `public/sw.js` is served at `/sw.js` on Vercel too — registration guard in `src/start.ts` already skips on preview hosts; it will run on the Vercel domain.
+4. Set Vercel project settings (documented in chat after deploy):
+   - Framework preset: Other
+   - Build command: `bun run build` (or the new `build:spa`)
+   - Output dir: `dist/client`
+5. Verify `<Link>` routes use TanStack file routes (they do); no `BrowserRouter` needed. The rewrite handles deep-link 404s.
+
+If Lovable Cloud / Worker SSR features are required later, the user should deploy via Lovable's published URL (already working at `slyve.lovable.app`) — Vercel will run as a static PWA mirror.
+
+---
+
+### Files to change
+
+- `src/lib/store.ts` — schema + actions + selectors + settings
+- `src/routes/index.tsx` — Homework card at top, toggle, reorder
+- `src/routes/homework.tsx` — NEW calendar + per-day detail
+- `src/routes/settings.tsx` — reset time control
+- `src/components/BottomNav.tsx` — Homework slot, FAB → AddHomeworkSheet
+- `src/components/AddHomeworkSheet.tsx` — NEW (subject → fields)
+- `src/components/HomeworkList.tsx` — NEW (shared renderer)
+- `src/components/Calendar.tsx` — marked dates + select callback
+- `src/routeTree.gen.ts` — regenerated by router plugin
+- `vercel.json` — NEW
+- `package.json` — optional `build:spa` script
+- `src/styles.css` — minor token additions if needed
+
+### Out of scope
+- Notifications/reminders when reset time hits.
+- Editing past homework on dates other than today (read-only history in calendar; can be added later).
+- Cloud sync.
+
+### Confirm before I build
+1. Add-homework UI as a **bottom sheet** from the `+` FAB (fast, no route change) — OK, or do you want a full `/homework/new` page?
+2. Dock layout: replace one of the existing slots with Homework? Suggested order: **Home · Absences · `+` · Homework · Checklists** (Settings via gear icon). OK?
+3. Weekend reset day: fixed to **Sunday end-of-day**, correct?

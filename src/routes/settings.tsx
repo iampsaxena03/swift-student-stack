@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PhoneShell } from "@/components/PhoneShell";
 import { useStore } from "@/lib/store";
 import { toast } from "sonner";
-import { Smartphone, Trash2, Info, Pin } from "lucide-react";
+import { Smartphone, Trash2, Info, Pin, Clock } from "lucide-react";
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
@@ -11,6 +11,8 @@ export const Route = createFileRoute("/settings")({
 function SettingsPage() {
   const absences = useStore((s) => s.absences);
   const checklists = useStore((s) => s.checklists);
+  const resetTime = useStore((s) => s.settings.dailyResetTime);
+  const setDailyResetTime = useStore((s) => s.setDailyResetTime);
 
   const clearAll = () => {
     if (!confirm("Erase ALL absences and checklists? This cannot be undone.")) return;
@@ -36,6 +38,26 @@ function SettingsPage() {
         </div>
 
         <div className="mt-6 overflow-hidden rounded-2xl bg-[oklch(0.22_0.005_270)]">
+          <div className="flex items-start gap-3 border-b border-white/5 px-4 py-4">
+            <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-on-surface">
+              <Clock className="h-5 w-5" />
+            </div>
+            <div className="flex-1">
+              <p className="text-on-surface text-sm font-semibold">Today's homework resets at</p>
+              <p className="text-on-surface-muted mt-0.5 text-xs leading-relaxed">
+                Anything logged before this time still counts as the previous day. Weekend homework is not affected.
+              </p>
+              <input
+                type="time"
+                value={resetTime}
+                onChange={(e) => {
+                  setDailyResetTime(e.target.value);
+                  toast(`Reset time set to ${e.target.value}`);
+                }}
+                className="text-on-surface mt-3 rounded-xl bg-white/10 px-3 py-2 text-sm outline-none ring-1 ring-white/10 focus:ring-white/30"
+              />
+            </div>
+          </div>
           <Row
             icon={<Smartphone className="h-5 w-5" />}
             title="Add to home screen"

@@ -1,7 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { CalendarDays, ListChecks, Plus, Pin, ChevronRight, Check } from "lucide-react";
+import { useMemo, useState } from "react";
+import { CalendarDays, ListChecks, Plus, Pin, ChevronRight, Check, BookOpen } from "lucide-react";
 import { PhoneShell } from "@/components/PhoneShell";
-import { useStore, colorTile } from "@/lib/store";
+import { useStore, colorTile, logicalToday, getHomeworkForDate } from "@/lib/store";
+import { HomeworkList } from "@/components/HomeworkList";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
@@ -19,12 +21,22 @@ function Index() {
   const hydrated = useStore((s) => s.hydrated);
   const absences = useStore((s) => s.absences);
   const checklists = useStore((s) => s.checklists);
+  const homework = useStore((s) => s.homework);
+  const resetTime = useStore((s) => s.settings.dailyResetTime);
   const toggleAbsence = useStore((s) => s.toggleAbsence);
 
   const today = format(new Date(), "yyyy-MM-dd");
   const isAbsentToday = absences.includes(today);
   const monthAbs = absences.filter((d) => d.startsWith(today.slice(0, 7))).length;
   const pinned = checklists.filter((c) => c.pinned);
+
+  const [hwKind, setHwKind] = useState<"today" | "weekend">("today");
+  const hwDate = useMemo(() => logicalToday(new Date(), resetTime), [resetTime]);
+  const { today: todayHw, weekend: weekendHw } = useMemo(
+    () => getHomeworkForDate(homework, hwDate),
+    [homework, hwDate],
+  );
+  const visible = hwKind === "today" ? todayHw : weekendHw;
 
   return (
     <PhoneShell>
@@ -44,9 +56,54 @@ function Index() {
           </Link>
         </div>
 
-        {/* Pinned checklists — FIRST */}
-        <div className="mt-7 flex items-center justify-between">
-          <h2 className="text-on-surface text-sm font-semibold uppercase tracking-wider text-on-surface-muted">
+        {/* Homework — TOP */}
+        <div className="mt-6 rounded-3xl bg-[oklch(0.22_0.005_270)] p-4 shadow-[var(--shadow-card)]">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10">
+                <BookOpen className="h-4 w-4 text-white" />
+              </div>
+              <p className="text-on-surface text-sm font-semibold">Homework</p>
+            </div>
+            <Link
+              to="/homework"
+              preload="intent"
+              className="text-on-surface-muted text-xs"
+            >
+              History →
+            </Link>
+          </div>
+
+          <div className="mt-3 flex rounded-full bg-white/5 p-1">
+            {(["today", "weekend"] as const).map((k) => (
+              <button
+                key={k}
+                onClick={() => setHwKind(k)}
+                className={`flex-1 rounded-full py-1.5 text-xs font-semibold capitalize transition ${
+                  hwKind === k ? "bg-white text-ink" : "text-on-surface-muted"
+                }`}
+              >
+                {k === "today" ? "Today's" : "Weekend"}
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-3">
+            <HomeworkList
+              entries={visible}
+              emptyText={
+                hwKind === "today"
+                  ? "Nothing for today. Tap + to add."
+                  : "No weekend homework. Tap + to add."
+              }
+              showWeekendRange={hwKind === "weekend"}
+            />
+          </div>
+        </div>
+
+        {/* Pinned checklists */}
+        <div className="mt-6 flex items-center justify-between">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-on-surface-muted">
             Quick lists
           </h2>
           <Link to="/checklists" preload="intent" className="text-xs text-on-surface-muted">

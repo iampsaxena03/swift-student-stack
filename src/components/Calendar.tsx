@@ -11,13 +11,25 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const WEEK = ["S", "M", "T", "W", "T", "F", "S"];
 
-export function Calendar({
-  absences,
-  onToggle,
-}: {
+type CommonProps = {
+  markedDates?: string[];
+  markColor?: string;
+  selectedDate?: string;
+};
+
+type ToggleProps = CommonProps & {
   absences: string[];
   onToggle: (date: string) => void;
-}) {
+  onSelect?: never;
+};
+
+type SelectProps = CommonProps & {
+  absences?: never;
+  onToggle?: never;
+  onSelect: (date: string) => void;
+};
+
+export function Calendar(props: ToggleProps | SelectProps) {
   const [cursor, setCursor] = useState(() => startOfMonth(new Date()));
 
   const days = useMemo(() => {
@@ -34,7 +46,9 @@ export function Calendar({
   }, [cursor]);
 
   const today = new Date();
-  const absSet = new Set(absences);
+  const absSet = new Set(props.absences ?? []);
+  const markSet = new Set(props.markedDates ?? []);
+  const markColor = props.markColor ?? "oklch(0.85 0.11 60)";
 
   return (
     <div className="rounded-3xl bg-white p-5 text-ink shadow-[var(--shadow-card)]">
@@ -63,9 +77,7 @@ export function Calendar({
 
       <div className="mt-5 grid grid-cols-7 gap-1 text-center text-[11px] text-ink-muted">
         {WEEK.map((d, i) => (
-          <div key={i} className="py-1 font-medium">
-            {d}
-          </div>
+          <div key={i} className="py-1 font-medium">{d}</div>
         ))}
       </div>
       <div className="mt-1 grid grid-cols-7 gap-1">
@@ -73,22 +85,35 @@ export function Calendar({
           if (!d) return <div key={i} className="aspect-square" />;
           const key = format(d, "yyyy-MM-dd");
           const absent = absSet.has(key);
+          const marked = markSet.has(key);
           const isToday = isSameDay(d, today);
+          const isSelected = props.selectedDate === key;
+
+          const handle = () => {
+            if (props.onToggle) props.onToggle(key);
+            else if (props.onSelect) props.onSelect(key);
+          };
+
           return (
             <button
               key={i}
-              onClick={() => onToggle(key)}
+              onClick={handle}
               className={`relative flex aspect-square items-center justify-center rounded-2xl text-sm font-medium transition active:scale-90 ${
                 absent
                   ? "bg-ink text-on-surface"
-                  : isToday
-                    ? "bg-[oklch(0.92_0.05_240)] text-ink"
-                    : "text-ink hover:bg-[oklch(0.96_0.005_270)]"
+                  : isSelected
+                    ? "bg-[oklch(0.16_0.005_270)] text-white"
+                    : isToday
+                      ? "bg-[oklch(0.92_0.05_240)] text-ink"
+                      : "text-ink hover:bg-[oklch(0.96_0.005_270)]"
               }`}
             >
               {d.getDate()}
-              {absent && (
-                <span className="absolute bottom-1.5 h-1 w-1 rounded-full bg-[oklch(0.86_0.09_10)]" />
+              {(absent || marked) && (
+                <span
+                  className="absolute bottom-1.5 h-1 w-1 rounded-full"
+                  style={{ background: absent ? "oklch(0.86 0.09 10)" : markColor }}
+                />
               )}
             </button>
           );
